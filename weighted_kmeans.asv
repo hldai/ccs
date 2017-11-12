@@ -1,0 +1,120 @@
+function [indices] = weighted_kmeans(X, k)
+%WEIGHTED_KMEANS Summary of this function goes here
+%   Detailed explanation goes here
+
+% disp(X);
+[m, dim] = size(X);
+
+weights = sqrt(sum(X .* X, 2));
+% disp(weights);
+
+init_rand_idxs = randperm(m, k);
+% TODO init
+
+rand_idxs = zeros([1, k]);
+cent_cnt = 1;
+rand_idxs(1) = randi(m);
+for i = 1:k
+    dists = zeros([1, m]);
+    cents = X(randidxs(1:cent_cnt), :);
+    for j = 1:m
+        d_tmp = cents - X(j);
+        dists(j) = min(sum(d_tmp .* d_tmp), 2);
+    end
+    
+    p = dists ./ sum(dists);
+    rand_idxs(cent_cnt) = find(mnrnd(1, p));
+end
+
+
+D = zeros(m, k);
+cents = X(init_rand_idxs, :);
+pre_obj_val = 1e10;
+obj_val = 1e10;
+round = 0;
+while 1
+    round = round + 1;
+    pre_obj_val = obj_val;
+%     disp(cents);
+    
+    for i = 1:k
+        cent_vec = cents(i, :);
+        dists = cent_vec - X;
+        dists = sum(dists .* dists, 2);
+        D(:, i) = dists;
+    end
+    [~, I] = min(D, [], 2);
+%     disp(I);
+    
+    Alloc = zeros(m, k);  % point to cluster
+    idxs = sub2ind(size(Alloc), 1:m, I');
+    Alloc(idxs) = 1;
+%     disp(sum(Alloc));
+%     disp(Alloc);
+
+%     diff = X - Alloc * cents;
+%     obj_val = weights' * sum(diff .* diff, 2);
+%     fprintf("round %d, k-means loss: %f\n", round, obj_val);
+    
+%     if abs(pre_obj_val - obj_val) < 0.0001
+%         break
+%     end
+    if round == 20
+        break
+    end
+    
+%     disp(sum(Alloc));
+    
+    Alloc_t = Alloc';
+    weighted_X = X .* weights;
+    sum_weights = Alloc_t * weights;
+    for i = 1:k
+        if abs(sum_weights(i)) > 0.00001
+            cents(i, :) = Alloc_t(i, :) * weighted_X ./ sum_weights(i);
+        end
+    end
+%     cents = Alloc' * (X .* weights) ./ (Alloc' * weights);
+%     disp(cents);
+end
+
+fprintf("%d rounds of k-means\n", round);
+csvwrite('d:/data/kddproj/cents.txt', cents);
+
+for i = 1:k
+    cent_vec = cents(i, :);
+    dists = cent_vec - X;
+    dists = sum(dists .* dists, 2);
+    D(:, i) = dists;
+end
+[~, indices_tmp] = min(D);
+
+% indices_tmp(2) = indices_tmp(1);
+indices_tmp = unique(indices_tmp);
+% disp(indices_tmp);
+[~, cnt] = size(indices_tmp);
+indices = zeros([1, k]);
+indices(1:cnt) = indices_tmp;
+% disp(indices);
+
+for i=cnt+1:k
+    while 1
+        rnd_idx = randi(m);
+        if ~ismember(rnd_idx, indices)
+            indices(i) = rnd_idx;
+            break
+        end
+    end
+end
+
+indices = sort(indices);
+% disp(indices);
+
+% x1 = X(:, 1);
+% x2 = X(:, 2);
+% plot(x1(I == 1), x2(I ==1), 'ro');
+% hold on;
+% plot(x1(I == 2), x2(I ==2), 'bo');
+% plot(X(indices, 1), X(indices, 2), 'g*');
+
+end
+
